@@ -270,10 +270,10 @@ def earrings(edx=None):
     def mk(key, label, drop, fn):
         return _earrings(key, label, drop, fn, edx)
 
-    def a1(d, s, dx):     # 진주
-        return [path(d, fill=S.C["white"], stroke=S.INK2, w=0.3),
-                circ(dx, 2.6, 1.45, fill="#ffffff", stroke=S.INK2, w=0.26),
-                circ(dx - 0.55, 2.1, 0.45, fill="#ffffff", c=False)]
+    def a1(d, s, dx):     # 진주 — 금테에 물린 진주. 흰 원만 두면 이어폰처럼 보인다.
+        return [path(d, fill=S.C["gold"], stroke=S.C["gold2"], w=0.3, c=True),
+                circ(dx, 2.7, 1.55, fill="#ffffff", stroke=S.C["gold2"], w=0.24),
+                circ(dx - 0.55, 2.2, 0.5, fill="#ffffff", c=False)]
     out.append(mk("ear1", "진주", D_ROUND, a1))
 
     def a2(d, s, dx):     # 하트
