@@ -34,13 +34,17 @@ def _mir(pts, s, dx):
 # ─────────────────────────────────────────────────────────────
 def _footwear(key, label, outline, art, tab_y=2.4, tags=("shoe",), pdx=None):
     p = Piece(key, label, "shoe_pair", tags=list(tags), halo=S.HALO_SMALL)
+    shapes = []
     for s in (-1, 1):
         dx = s * (PAIR_DX if pdx is None else pdx)
         pts = _mir(outline, s, dx)
         p.cut_pts(pts)
         p.tab(dx, tab_y, S.TAB["shoe_ankle"]["w"], S.TAB["shoe_ankle"]["h"],
               "up", name="발등")
-        p.art(*art(smooth(pts), s, dx))
+        shapes.append((smooth(pts), s, dx))
+    if not p.use_art():
+        for d, s, dx in shapes:
+            p.art(*art(d, s, dx))
     return p
 
 
@@ -167,7 +171,8 @@ def _crown(key, label, deco, art):
         p.cut(smooth(deco, 0.85), deco)
     for s in (-1, 1):
         p.tab(s * 14.7, 13.0, 4.6, 5.0, "down", name="관자놀이")
-    p.art(*art(bd))
+    if not p.use_art():
+        p.art(*art(bd))
     return p
 
 
@@ -242,6 +247,7 @@ EAR_DX = 8.0
 
 def _earrings(key, label, drop, art, edx=None):
     p = Piece(key, label, "earring", tags=["earring"], halo=S.HALO_SMALL)
+    shapes = []
     for s in (-1, 1):
         dx = s * (EAR_DX if edx is None else edx)
         # 고리 — 위로 뻗은 띠. 가운데 접는선.
@@ -253,7 +259,10 @@ def _earrings(key, label, drop, art, edx=None):
         p.fold(dx - 1.7, -3.6, dx + 1.7, -3.6)
         pts = [(dx + x, y) for x, y in drop]
         p.cut_pts(pts)
-        p.art(*art(smooth(pts), s, dx))
+        shapes.append((smooth(pts), s, dx))
+    if not p.use_art():
+        for d, s, dx in shapes:
+            p.art(*art(d, s, dx))
     return p
 
 
@@ -271,8 +280,8 @@ def earrings(edx=None):
         return _earrings(key, label, drop, fn, edx)
 
     def a1(d, s, dx):     # 진주 — 금테에 물린 진주. 흰 원만 두면 이어폰처럼 보인다.
-        return [path(d, fill=S.C["gold"], stroke=S.C["gold2"], w=0.3, c=True),
-                circ(dx, 2.7, 1.55, fill="#ffffff", stroke=S.C["gold2"], w=0.24),
+        return [path(d, fill=S.C["cream"], stroke=S.C["gold2"], w=0.34, c=True),
+                circ(dx, 2.7, 1.6, fill="#ffffff", stroke=S.C["gold2"], w=0.26),
                 circ(dx - 0.55, 2.2, 0.5, fill="#ffffff", c=False)]
     out.append(mk("ear1", "진주", D_ROUND, a1))
 
@@ -319,7 +328,8 @@ def _necklace(key, label, art, pendant):
     t = S.TAB["necklace_side"]
     p.tab(5.1, t["y"], t["w"], t["h"], "right", name="목 옆")
     p.tab(-5.1, t["y"], t["w"], t["h"], "left", name="목 옆")
-    p.art(*art(smooth(band, 0.8)))
+    if not p.use_art():
+        p.art(*art(smooth(band, 0.8)))
     return p
 
 
@@ -367,7 +377,8 @@ def _handheld(key, label, outline, art, tab=None, tags=("prop",), t=1.0):
     tw = S.TAB["prop_wrist"]
     ty, tdir = tab or (min(y for _, y in outline) + 1.2, "up")
     p.tab(0.0, ty, tw["w"], tw["h"], tdir, name="손목")
-    p.art(*art(smooth(outline, t)))
+    if not p.use_art():
+        p.art(*art(smooth(outline, t)))
     return p
 
 

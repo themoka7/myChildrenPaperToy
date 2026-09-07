@@ -14,7 +14,8 @@ y 는 전부 "어깨선에서 아래로 몇 mm" 다.
     · 조각 반쪽 폭은 27mm 이하 — 한 줄에 3벌이 들어가야 한다.
 """
 from . import spec as S
-from .svg import Piece, blob, circ, f, path, smooth, sym
+from .svg import (Piece, blob, circ, f, path, rim, smooth, soft,
+                  sym, volume)
 
 WAIST = 24.0
 HIP = 38.0
@@ -142,8 +143,10 @@ def _dress(key, label, half, art):
     p.tab(wx, tw["y"], tw["w"], tw["h"], "right", name="허리")
     p.tab(-wx, tw["y"], tw["w"], tw["h"], "left", name="허리")
 
-    p.art(*art(d))
-    p.art(path(d, stroke=S.INK, w=0.34))
+    if not p.use_art():
+        p.art(*art(d))
+        p.art(*volume(p, d))
+        p.art(path(d, stroke=S.INK, w=0.34))
     return p
 
 
@@ -392,8 +395,10 @@ def _cape(key, label, half, art):
     p.cut(d, sil)
     for s in (-1, 1):
         p.tab(s * 7.4, 1.2, 6.0, 7.0, "up", name="어깨")
-    p.art(*art(d))
-    p.art(path(d, stroke=S.INK, w=0.34))
+    if not p.use_art():
+        p.art(*art(d))
+        p.art(*volume(p, d, top=0.26, bottom=0.2))
+        p.art(path(d, stroke=S.INK, w=0.34))
     return p
 
 

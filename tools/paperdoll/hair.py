@@ -23,7 +23,8 @@
 귀를 덮든 말든 상관없다. 그래서 머리 디자인에 귀 노출 제약이 없다.
 """
 from . import spec as S
-from .svg import Piece, blob, circ, mirror, path, smooth, sym
+from .svg import (Piece, blob, circ, lg, mirror, path, rim, smooth,
+                  sym, volume)
 
 # 얼굴 창 — 이마 가운데 → 광대 → 턱 옆. 두 가지 헤어라인.
 # 창의 옆선은 본체 머리(±15.4)보다 **안쪽**으로 들어와야 한다. 그래야 본체에
@@ -63,9 +64,13 @@ def _hair(key, label, inner, outer, tone, art, tab_x, tab_y):
         p.tab(s * tab_x, tab_y, t["w"], t["h"], "up", name="정수리")
 
     lo, dk, hi = S.HAIR[tone]
-    p.art(path(d, fill=lo, c=True))
-    p.art(*art(d, lo, dk, hi))
-    p.art(path(d, stroke=S.INK, w=0.34))
+    p.add_defs(lg(p.g("h"), [(0.0, hi), (0.38, lo), (1.0, dk)]))
+    if not p.use_art():
+        p.art(path(d, fill=f"url(#{p.g('h')})", c=True))
+        p.art(*art(d, lo, dk, hi))
+        p.art(rim(d, dk, w=2.4, op=0.4))
+        p.art(*volume(p, d, top=0.2, bottom=0.14, side=0.12, tone=dk))
+        p.art(path(d, stroke=S.INK, w=0.34))
     return p
 
 

@@ -55,12 +55,15 @@ HTML = """<!DOCTYPE html>
   }}
   .bar label{{ display:flex; gap:6px; align-items:center; cursor:pointer; }}
   .page{{
-    width:210mm; height:297mm; margin:16px auto; background:#fff;
+    /* 레퍼런스 도안의 종이는 순백이 아니라 옅은 아이보리다.
+       오림선 여백은 흰색이라 조각이 종이에서 살짝 떠 보인다. */
+    width:210mm; height:297mm; margin:16px auto; background:#fdfaf4;
     box-shadow:0 2px 14px rgba(0,0,0,.18); overflow:hidden;
   }}
   svg.sheet{{ display:block; }}
   /* 색칠판 — 색을 채우는 도형만 비운다. 눈·입술은 그대로 남는다. */
   body.line .c{{ fill:#fff !important; }}
+  body.line .w{{ display:none !important; }}   /* 음영·번짐은 숨긴다 */
   body.line .sheet text{{ fill:#9b9b9b !important; }}
   @media print{{
     .bar{{ display:none; }}

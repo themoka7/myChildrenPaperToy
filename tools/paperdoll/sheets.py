@@ -6,7 +6,7 @@
 파츠를 하나 더 끼워 넣다가 조용히 겹치는 사고를 막는 장치다.
 """
 from . import spec as S
-from .svg import f, group, line, path, smooth
+from .svg import defs_common, f, group, line, path, smooth
 
 
 class Sheet:
@@ -100,7 +100,7 @@ class Sheet:
 
     # ---- 출력 ---------------------------------------------------
     def svg(self):
-        body = [self.header()]
+        body = [defs_common(), self.header()]
         for pc, x, y in self.items:
             body.append(group(pc.svg(), tx=x, ty=y))
         body += self.extra

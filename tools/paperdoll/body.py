@@ -17,7 +17,8 @@
     · 발판은 **발보다 먼저** 그린다. 그래야 발이 발판 앞에 서 있는 것으로 보인다.
 """
 from . import spec as S
-from .svg import (Piece, blob, circ, ell, f, line, path, smooth, sym)
+from .svg import (Piece, blob, circ, ell, f, lg, line, path, rim, rg,
+                  smooth, soft, sym)
 
 # ─────────────────────────────────────────────────────────────
 # 실루엣 — 오른쪽 절반 (정수리 → 발밑 가운데). 왼쪽은 좌우 대칭.
@@ -135,21 +136,31 @@ def _face():
     return a
 
 
-def _hair_base():
+def _hair_base(gid):
     lo, dk, hi = S.HAIR["brown"]
     return [
-        blob(BASE_HAIR, fill=lo, stroke=S.INK, w=0.32),
-        path(smooth([(-10.6, 7.0), (-5.2, 3.2), (1.6, 1.8)], closed=False),
-             stroke=hi, w=0.5, op=0.6),
-        path(smooth([(-13.4, 12.0), (-8.0, 6.0), (1.2, 3.2)], closed=False),
-             stroke=hi, w=0.36, op=0.45),
-        path(smooth([(12.4, 9.0), (7.6, 4.0), (1.4, 2.2)], closed=False),
-             stroke=dk, w=0.42, op=0.4),
+        blob(BASE_HAIR, fill=f"url(#{gid})", stroke=S.INK, w=0.32),
+        rim(smooth(BASE_HAIR), dk, w=2.2, op=0.4),
+        rim(smooth(BASE_HAIR), hi, w=1.6, op=0.5),
+    ] + [
+        # 머리 결 — 가늘게 여러 겹 (한두 줄이면 긁힌 자국처럼 보인다)
+        path(smooth([(-1.0 - i * 1.9, 2.0 + i * 0.5),
+                     (-6.0 - i * 1.4, 4.4 + i * 1.1),
+                     (-10.4 - i * 0.9, 9.0 + i * 1.9)], closed=False),
+             stroke=hi if i % 2 else dk, w=0.34, op=0.42)
+        for i in range(6)
+    ] + [
+        path(smooth([(1.2 + i * 1.9, 1.8 + i * 0.5),
+                     (6.4 + i * 1.4, 4.2 + i * 1.1),
+                     (10.8 + i * 0.9, 8.6 + i * 1.9)], closed=False),
+             stroke=dk if i % 2 else hi, w=0.34, op=0.38)
+        for i in range(6)
+    ] + [
         # 얼굴을 감싸는 옆머리
-        path(smooth([(-14.2, 13.0), (-14.6, 17.0), (-13.4, 20.2)],
-                    closed=False), stroke=dk, w=0.42, op=0.45),
-        path(smooth([(14.2, 13.0), (14.6, 17.0), (13.4, 20.2)],
-                    closed=False), stroke=dk, w=0.42, op=0.45),
+        path(smooth([(-14.2, 13.0), (-14.8, 17.0), (-13.4, 20.4)],
+                    closed=False), stroke=dk, w=0.4, op=0.45),
+        path(smooth([(14.2, 13.0), (14.8, 17.0), (13.4, 20.4)],
+                    closed=False), stroke=dk, w=0.4, op=0.45),
     ]
 
 
@@ -160,8 +171,20 @@ def _underwear():
     # 팬티는 다리가 트인 모양 — 옆은 짧고 가운데가 내려온다
     pants = sym([(0.0, 75.4), (5.0, 75.8), (9.4, 77.6), (10.8, 81.0),
                  (8.6, 84.2), (4.6, 86.6), (0.0, 87.6)])
-    a = [blob(cami, fill=S.C["cream"], stroke=S.INK, w=0.3),
-         blob(pants, fill=S.C["cream"], stroke=S.INK, w=0.3)]
+    cd, pd = smooth(cami), smooth(pants)
+    a = [path(cd, fill=S.C["cream"]),
+         # 천 주름 — 흐린 음영 덩어리
+         soft([(-9.6, 46.0), (-5.6, 51.0), (-7.0, 57.6), (-10.4, 55.0)],
+              "#e2cdb2", 0.7),
+         soft([(9.6, 45.0), (6.0, 50.0), (7.6, 57.6), (10.4, 53.0)],
+              "#e2cdb2", 0.6),
+         rim(cd, "#d8c2a6", w=2.0, op=0.75),
+         path(cd, stroke=S.INK, w=0.3),
+         path(pd, fill=S.C["cream"]),
+         soft([(-8.8, 77.0), (-4.6, 81.0), (-6.4, 86.0), (-9.8, 82.0)],
+              "#e2cdb2", 0.6),
+         rim(pd, "#d8c2a6", w=1.8, op=0.75),
+         path(pd, stroke=S.INK, w=0.3)]
     for s in (-1, 1):
         a.append(line(s * 5.8, 42.6, s * 7.6, 38.8, S.INK, 0.3))
     # 레이스 — 작은 반원을 이어 붙인다
@@ -222,7 +245,20 @@ def _limbs():
             # 어깨 음영
             path(smooth([(s * 8.6, 39.2), (s * 11.0, 41.2), (s * 12.4, 45.0)],
                         closed=False), stroke=S.SKIN_SH, w=0.85, op=0.8),
+            # 팔 안쪽 그늘 · 다리 안쪽 그늘 (빛은 왼쪽 위에서 온다고 본다)
+            soft([(s * 13.2, 46.0), (s * 14.2, 68.0), (s * 14.6, 90.0),
+                  (s * 17.0, 88.0), (s * 17.2, 64.0), (s * 15.2, 46.0)],
+                 "#ecbfa5", 0.75 if s > 0 else 0.42, wide=True),
+            soft([(s * 4.2, 98.0), (s * 5.2, 118.0), (s * 4.4, 138.0),
+                  (s * 8.0, 136.0), (s * 9.6, 114.0), (s * 8.2, 98.0)],
+                 "#ecbfa5", 0.6 if s > 0 else 0.3, wide=True),
+            # 무릎 홍조 — 레퍼런스 도안의 특징이다
+            ell(s * 7.2, 119.0, 2.6, 2.0, fill=S.BLUSH, op=0.2, c=False),
         ]
+    a.insert(0, soft([(7.0, 40.0), (10.4, 56.0), (11.4, 76.0), (11.0, 92.0),
+                      (5.0, 90.0), (4.6, 58.0)], "#ecbfa5", 0.4, wide=True))
+    a.insert(0, soft([(-4.4, 34.6), (0.0, 37.0), (4.4, 34.6), (3.0, 39.0),
+                      (0.0, 39.6), (-3.0, 39.0)], "#e8b49a", 0.65))
     a.append(blob(LEG_GAP, fill="#ffffff", stroke=None, t=0.9, c=False))
     for s in (-1, 1):
         a.append(path(smooth([(s * 0.0, 88.4), (s * 3.4, 98.0), (s * 3.9, 112.0),
@@ -232,10 +268,10 @@ def _limbs():
     return a
 
 
-def _plate():
+def _plate(gid):
     """발판 — 발보다 먼저 그린다 (발이 앞에 서 있는 것으로 보이도록)."""
     return [
-        path(PLATE_D, fill=S.C["cream2"], stroke=S.INK, w=0.32, c=True),
+        path(PLATE_D, fill=f"url(#{gid})", stroke=S.INK, w=0.32, c=True),
         path("M-13.6,151.4 C-13.6,149.5 -7.6,148.8 0,148.8 C7.6,148.8 13.6,149.5 "
              "13.6,151.4 C9,153 -9,153 -13.6,151.4 Z",
              fill="#fffaf0", c=True, op=0.95),
@@ -247,14 +283,27 @@ def _plate():
 
 
 def body():
-    """공주 본체 1조각 (앵커: 정수리)."""
+    """공주 본체 1조각 (앵커: 정수리).
+
+    채색은 세 겹이다 — 그라데이션으로 채우고, 윤곽 안쪽에 번짐을 얹고,
+    흐린 음영 덩어리로 팔·다리를 세운다. 평면 단색으로 칠하면 형태가
+    맞아도 벡터 클립아트처럼 보인다.
+    """
     p = Piece("body", "공주", "body")
     p.cut(SIL_D, SIL)
     p.cut(PLATE_D, [(-14.0, S.STAND_PLATE_TOP), (14.0, S.BODY_BOTTOM)])
-    p.art(*_plate())
-    p.art(path(SIL_D, fill=S.SKIN, c=True),
-          path(SIL_D, stroke=S.INK, w=0.36))
-    p.art(*_hair_base(), *_underwear(), *_limbs(), *_face())
+    p.add_defs(
+        lg(p.g("skin"), [(0.0, "#fdeee4"), (0.42, S.SKIN), (1.0, "#f6d2bd")]),
+        lg(p.g("hair"), [(0.0, S.HAIR["brown"][2]), (0.4, S.HAIR["brown"][0]),
+                         (1.0, S.HAIR["brown"][1])]),
+        lg(p.g("plate"), [(0.0, "#fffaf0"), (1.0, "#f0e2cc")]),
+    )
+    if not p.use_art():          # art/body.png 이 있으면 그림만 갈아 끼운다
+        p.art(*_plate(p.g("plate")))
+        p.art(path(SIL_D, fill=f"url(#{p.g('skin')})", c=True),
+              rim(SIL_D, "#eec3ab", w=2.4, op=0.45),
+              path(SIL_D, stroke=S.INK, w=0.36))
+        p.art(*_hair_base(p.g("hair")), *_underwear(), *_limbs(), *_face())
     return p
 
 
@@ -264,9 +313,13 @@ def base():
     w, h = S.BASE_W, S.BASE_H
     p.cut_ell(0, 0, w / 2, h / 2)
     p.slit(0, 0.6, S.BASE_SLIT)
-    p.art(
-        ell(0, 0, w / 2, h / 2, fill=S.C["cream2"], stroke=S.INK, w=0.34),
-        ell(0, -0.6, w / 2 - 2.2, h / 2 - 2.0, fill="#fffaf0", op=0.85),
-        ell(0, -0.6, w / 2 - 2.2, h / 2 - 2.0, stroke=S.INK2, w=0.28, c=False),
-    )
+    p.add_defs(lg(p.g("b"), [(0.0, "#fffaf0"), (1.0, "#eddfc8")]))
+    if not p.use_art():
+        p.art(
+            ell(0, 0, w / 2, h / 2, fill=f"url(#{p.g('b')})", stroke=S.INK,
+                w=0.34),
+            ell(0, -0.6, w / 2 - 2.2, h / 2 - 2.0, fill="#fffaf0", op=0.85),
+            ell(0, -0.6, w / 2 - 2.2, h / 2 - 2.0, stroke=S.INK2, w=0.28,
+                c=False),
+        )
     return p

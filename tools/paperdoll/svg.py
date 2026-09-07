@@ -26,6 +26,31 @@ SVG 에는 "도형을 3mm 바깥으로 부풀리기"가 없어서 윤곽선 굵�
 여백 없이 **선 위를 그대로 오리는** 얇은 점선(`tight`)으로 그린다.
 바깥 윤곽은 여백이 있고 안쪽 창은 딱 맞는 것 — 실제 인쇄용 가발 도안이 쓰는 방식이다.
 
+## 수채 느낌 내기 — 그라데이션 + 안쪽 번짐
+
+레퍼런스는 수채/색연필 채색이다. 평면 단색으로 칠하면 아무리 형태가 맞아도
+"벡터 클립아트"로 보인다. 벡터로 그 느낌에 다가가는 수단은 셋이다.
+
+    1. **그라데이션** — 살·머리·천을 단색이 아니라 위아래 두 톤으로 채운다.
+    2. **안쪽 번짐(rim)** — 도형 윤곽에 굵고 흐린 선을 얹고 도형 안쪽으로
+       클립한다. 물감이 종이 가장자리에 고이는 효과가 그대로 난다.
+       그림이 이미 실루엣에 클립돼 있으므로 굵은 선의 바깥 절반은 잘려
+       나가고 안쪽 절반만 남는다.
+    3. **흐린 음영 덩어리(soft)** — 접힌 천, 팔·다리 그늘.
+
+2·3 은 `filter=SOFT` 로 흐리게 만든다. 인쇄는 Chromium 이 래스터로 굽기 때문에
+그대로 나온다.
+
+## 수채 원화(래스터)를 끼우는 자리
+
+벡터로 낼 수 있는 한계는 "에어브러시로 칠한 벡터"다. 레퍼런스처럼 물감이
+번지고 연필 결이 보이는 그림은 손으로 쓴 SVG 로는 나오지 않는다.
+그래서 파츠마다 **그림만 PNG 로 갈아 끼울 수 있게** 해 두었다 —
+`art/<파츠키>.png` 가 있으면 벡터 그림 대신 그 이미지를 실루엣에 클립해서 쓴다.
+오림선·탭·앵커·배치·검사는 전부 그대로 동작한다.
+
+규격은 `DESIGN.md` 의 「수채 원화로 갈아 끼우기」에 있다.
+
 ## 색칠판
 
 색을 채우는 도형에는 `class="c"` 를 붙인다. 색칠판 CSS 가 `.c{fill:#fff}` 로
@@ -88,7 +113,43 @@ def line(x1, y1, x2, y2, stroke=None, w=0.3, dash=None, cap="round"):
             f'stroke="{st}" stroke-width="{f(w)}" stroke-linecap="{cap}"{d}/>')
 
 
-def path(d, fill="none", stroke=None, w=0.3, c=False, dash=None, op=None):
+SOFT = "pdSoft"      # 시트 <defs> 에 한 번 정의되는 흐림 필터
+SOFT2 = "pdSoft2"    # 더 넓게 퍼지는 흐림
+
+
+def defs_common():
+    """시트마다 한 번 넣는 공용 defs (흐림 필터)."""
+    return (f'<defs>'
+            f'<filter id="{SOFT}" x="-30%" y="-30%" width="160%" height="160%">'
+            f'<feGaussianBlur stdDeviation="0.55"/></filter>'
+            f'<filter id="{SOFT2}" x="-40%" y="-40%" width="180%" height="180%">'
+            f'<feGaussianBlur stdDeviation="1.5"/></filter>'
+            f'</defs>')
+
+
+def _stops(stops):
+    out = []
+    for t in stops:
+        o, col = t[0], t[1]
+        op = t[2] if len(t) > 2 else None
+        so = f' stop-opacity="{f(op)}"' if op is not None else ""
+        out.append(f'<stop offset="{f(o)}" stop-color="{col}"{so}/>')
+    return "".join(out)
+
+
+def lg(gid, stops, x1=0.0, y1=0.0, x2=0.0, y2=1.0):
+    """선형 그라데이션 (기본 세로). stops = [(offset, color[, opacity]), ...]"""
+    return (f'<linearGradient id="{gid}" x1="{f(x1)}" y1="{f(y1)}" '
+            f'x2="{f(x2)}" y2="{f(y2)}">{_stops(stops)}</linearGradient>')
+
+
+def rg(gid, stops, cx=0.5, cy=0.38, r=0.72):
+    return (f'<radialGradient id="{gid}" cx="{f(cx)}" cy="{f(cy)}" '
+            f'r="{f(r)}">{_stops(stops)}</radialGradient>')
+
+
+def path(d, fill="none", stroke=None, w=0.3, c=False, dash=None, op=None,
+         blur=None, wash=False):
     a = [f'd="{d}"', f'fill="{fill}"']
     if stroke:
         a.append(f'stroke="{stroke}" stroke-width="{f(w)}" '
@@ -97,13 +158,47 @@ def path(d, fill="none", stroke=None, w=0.3, c=False, dash=None, op=None):
         a.append(f'stroke-dasharray="{dash}"')
     if op is not None:
         a.append(f'opacity="{f(op)}"')
-    if c:
+    if blur:
+        a.append(f'filter="url(#{blur})"')
+    if wash:
+        a.append('class="w"')   # 색칠판에서는 숨긴다 (음영·번짐)
+    elif c:
         a.append('class="c"')
     return f'<path {" ".join(a)}/>'
 
 
-def blob(pts, fill, stroke=None, w=0.3, t=1.0, c=True, op=None):
-    return path(smooth(pts, t), fill=fill, stroke=stroke, w=w, c=c, op=op)
+def blob(pts, fill, stroke=None, w=0.3, t=1.0, c=True, op=None, blur=None):
+    return path(smooth(pts, t), fill=fill, stroke=stroke, w=w, c=c, op=op,
+                blur=blur)
+
+
+def rim(d, color, w=2.6, op=0.5, blur=None):
+    """안쪽 번짐 — 굵고 흐린 윤곽선. 그림이 실루엣에 클립되므로 안쪽만 남는다."""
+    return path(d, stroke=color, w=w, op=op, blur=blur or SOFT, wash=True)
+
+
+def soft(pts, fill, op=0.4, t=1.0, wide=False):
+    """흐린 음영 덩어리 — 천 주름, 팔·다리 그늘."""
+    return path(smooth(pts, t), fill=fill, op=op,
+                blur=SOFT2 if wide else SOFT, wash=True)
+
+
+def volume(p, d, top=0.30, bottom=0.17, side=0.15, tone="#8a6552"):
+    """어떤 파츠에나 얹는 입체감 — 위는 밝게, 아래·오른쪽은 어둡게 + 번짐.
+
+    파츠마다 음영을 손으로 그리지 않아도 천이 부풀어 보인다.
+    색칠판에서는 class="w" 라서 전부 사라진다.
+    """
+    p.add_defs(
+        lg(p.g("vv"), [(0.0, "#ffffff", top), (0.32, "#ffffff", 0.0),
+                       (0.7, tone, 0.0), (1.0, tone, bottom)]),
+        lg(p.g("vh"), [(0.0, "#ffffff", side * 0.7), (0.24, "#ffffff", 0.0),
+                       (0.74, tone, 0.0), (1.0, tone, side)],
+           x1=0.0, y1=0.0, x2=1.0, y2=0.0),
+    )
+    return [path(d, fill=f"url(#{p.g('vv')})", wash=True),
+            path(d, fill=f"url(#{p.g('vh')})", wash=True),
+            rim(d, tone, w=2.2, op=0.22)]
 
 
 def ell(cx, cy, rx, ry, fill="none", stroke=None, w=0.3, c=True, rot=None, op=None):
@@ -172,6 +267,7 @@ class Piece:
         self.label = label
         self.anchor = anchor
         self.tags = list(tags)
+        self._defs = []
         # 작은 파츠는 여백을 좁힌다. 신발(폭 10mm)에 3.3mm 여백을 주면
         # 여백이 그림보다 커져서 형태가 뭉개진다.
         self.halo = S.HALO if halo is None else halo
@@ -263,6 +359,38 @@ class Piece:
         self._art += [s for s in svg if s]
         return self
 
+    def use_art(self, box=None, key=None):
+        """`art/<키>.png` 가 있으면 그림을 그 이미지로 대체한다.
+
+        box=(x0,y0,x1,y1) 는 파츠 로컬 좌표(mm)에서 이미지가 놓일 자리다.
+        없으면 파츠 경계 상자(오림선 여백 제외)를 쓴다.
+        돌려주는 값이 True 면 벡터 그림은 그리지 않는다.
+        """
+        import base64
+        import pathlib as _p
+        root = _p.Path(__file__).resolve().parent.parent.parent
+        src = root / "art" / f"{key or self.key}.png"
+        if not src.exists():
+            return False
+        if box is None:
+            box = self.bbox(halo=False)
+        x0, y0, x1, y1 = box
+        b64 = base64.b64encode(src.read_bytes()).decode()
+        self._art.append(
+            f'<image x="{f(x0)}" y="{f(y0)}" width="{f(x1 - x0)}" '
+            f'height="{f(y1 - y0)}" preserveAspectRatio="none" '
+            f'href="data:image/png;base64,{b64}"/>')
+        return True
+
+    def add_defs(self, *d):
+        """그라데이션 정의. id 는 파츠 uid 로 유일하게 만든다 (self.g("skin"))."""
+        self._defs += [x for x in d if x]
+        return self
+
+    def g(self, name):
+        """이 파츠 전용 그라데이션 id."""
+        return f"g{self.uid}{name}"
+
     # ---- 상자 ---------------------------------------------------
     def bbox(self, halo=True):
         xs = [p[0] for p in self._pts]
@@ -296,15 +424,16 @@ class Piece:
              if hz else
              line(cx, cy - L / 2, cx, cy + L / 2, stroke=S.INK, w=0.55, cap="butt"))
             for cx, cy, L, hz in self._slit)
+        dfs = f'<defs>{"".join(self._defs)}</defs>' if self._defs else ""
         if worn:
-            return (f'<g class="pc" data-key="{self.key}">'
+            return (f'<g class="pc" data-key="{self.key}">{dfs}'
                     f'<clipPath id="{cid}">{a}</clipPath>'
                     f'<g clip-path="url(#{cid})">{"".join(self._art)}</g></g>')
         tight = "".join(
             f'<path d="{d}" fill="none" stroke="{S.CUT}" stroke-width="0.34" '
             f'stroke-dasharray="1.6 1.1" stroke-linecap="round"/>'
             for d in self._tight)
-        return (f'<g class="pc" data-key="{self.key}">'
+        return (f'<g class="pc" data-key="{self.key}">{dfs}'
                 f'<clipPath id="{cid}">{a}</clipPath>'
                 f'{lay1}{lay2}'
                 f'<g clip-path="url(#{cid})">{"".join(self._art)}</g>'
